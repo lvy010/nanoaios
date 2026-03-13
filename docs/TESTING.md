@@ -18,7 +18,7 @@ cargo --version
 ## 2. 初始化配置
 
 ```bash
-cd /root/nanoaios
+cd nanoaios
 cargo run -- init
 ```
 

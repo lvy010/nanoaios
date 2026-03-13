@@ -7,6 +7,8 @@
 
 ## 项目定位
 
+<p align="center"><img src="png/nanoaios.png" width="160" alt="nanoaios" /></p>
+
 在 `nanoaios` 中，AI 不是外挂能力，而是系统原生能力：
 
 - 用最小内核面承载推理入口与系统状态

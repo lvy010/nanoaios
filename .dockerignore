@@ -1,0 +1,11 @@
+/target
+/.git
+.gitignore
+/.idea
+/.vscode
+.DS_Store
+/docs
+LICENSE
+CONTRIBUTING.md
+/png
+docker-compose.yml

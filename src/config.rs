@@ -1,3 +1,4 @@
+use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -6,12 +7,23 @@ use serde::{Deserialize, Serialize};
 
 const APP_DIR_NAME: &str = ".nanoaios";
 const CONFIG_FILE_NAME: &str = "config.toml";
+const ENV_PREFIX: &str = "NANOAIOS_";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ProviderKind {
     Mock,
     OpenaiCompatible,
+}
+
+impl ProviderKind {
+    fn from_str_lossy(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_str() {
+            "mock" => Ok(Self::Mock),
+            "openai_compatible" => Ok(Self::OpenaiCompatible),
+            other => Err(anyhow!("未知的 provider kind: {other}，可选: mock, openai_compatible")),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,6 +58,10 @@ impl Default for AppConfig {
     }
 }
 
+fn env_var(name: &str) -> Option<String> {
+    env::var(format!("{ENV_PREFIX}{name}")).ok()
+}
+
 pub fn config_dir() -> Result<PathBuf> {
     let home = dirs::home_dir().ok_or_else(|| anyhow!("无法解析 HOME 目录"))?;
     Ok(home.join(APP_DIR_NAME))
@@ -70,13 +86,38 @@ pub fn init_config(force: bool) -> Result<PathBuf> {
 }
 
 pub fn load_config(path: Option<&Path>) -> Result<AppConfig> {
-    let final_path = match path {
+    let mut config = AppConfig::default();
+
+    let toml_path = match path {
         Some(p) => p.to_path_buf(),
         None => config_path()?,
     };
-    let raw = fs::read_to_string(&final_path)
-        .with_context(|| format!("读取配置失败: {}", final_path.display()))?;
-    let config = toml::from_str::<AppConfig>(&raw)
-        .with_context(|| format!("解析配置失败: {}", final_path.display()))?;
+
+    if toml_path.exists() {
+        let raw = fs::read_to_string(&toml_path)
+            .with_context(|| format!("读取配置失败: {}", toml_path.display()))?;
+        config = toml::from_str::<AppConfig>(&raw)
+            .with_context(|| format!("解析配置失败: {}", toml_path.display()))?;
+    }
+
+    if let Some(v) = env_var("NODE_NAME") {
+        config.node_name = v;
+    }
+    if let Some(v) = env_var("API_HOST") {
+        config.api_host = v;
+    }
+    if let Some(v) = env_var("API_PORT") {
+        config.api_port = v.parse().with_context(|| "NANOAIOS_API_PORT 解析失败，需要数字")?;
+    }
+    if let Some(v) = env_var("PROVIDER_KIND") {
+        config.provider.kind = ProviderKind::from_str_lossy(&v)?;
+    }
+    if let Some(v) = env_var("PROVIDER_MODEL") {
+        config.provider.model = v;
+    }
+    if let Some(v) = env_var("PROVIDER_BASE_URL") {
+        config.provider.base_url = Some(v);
+    }
+
     Ok(config)
 }

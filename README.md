@@ -1,13 +1,13 @@
 # nanoaios
 
-有一阵子我一直在想：Agent 时代到来，我们到底该先造“应用集合”，还是先造“系统内核”,
+有一阵子我一直在想：Agent 时代到来，我们到底该先造"应用集合"，还是先造"系统内核",
 图片记录了当时的一些想法切片，也是 `nanoaios` 的起点
 
 <p align="center"><img src="png/because.png" alt="because" width="760" /></p>
 
 `nanoaios` ：一个面向 Agent 时代的极简 AIOS-kernel demo实现，定位为 **AIOS 的 Linux**。  
 
-目标不是堆叠“AI 功能集合”，而是提供一套可验证、可扩展、可替换的系统级 AI 抽象。
+目标不是堆叠"AI 功能集合"，而是提供一套可验证、可扩展、可替换的系统级 AI 抽象。
 
 ~~写燃起来了，快速 vibe 的一个项目~~，之后或许会继续完善，欢迎交流讨论
 
@@ -51,33 +51,62 @@
 
 ## 快速开始
 
-### 1) 初始化
+配置优先级：**环境变量 > config.toml > 默认值**
+
+### 1) 配置
 
 ```bash
-cd nanoaios
-cargo run -- init
+cp .env.example .env
 ```
 
-### 2) 启动服务
+编辑 `.env`：
+
+```env
+NANOAIOS_PROVIDER_KIND=openai_compatible
+NANOAIOS_PROVIDER_MODEL=gpt-4o-mini
+NANOAIOS_PROVIDER_BASE_URL=https://api.openai.com/v1
+OPENAI_API_KEY=sk-your-api-key-here
+```
+
+也可通过 `cargo run -- init` 生成 `~/.nanoaios/config.toml`，或用 `--config` 指定路径。环境变量优先级更高，会覆盖 TOML 中的值。
+
+| 环境变量 | 对应字段 | 默认值 |
+|---|---|---|
+| NANOAIOS_NODE_NAME | node_name | nanoaios-local |
+| NANOAIOS_API_HOST | api_host | 127.0.0.1 |
+| NANOAIOS_API_PORT | api_port | 4242 |
+| NANOAIOS_PROVIDER_KIND | provider.kind | mock |
+| NANOAIOS_PROVIDER_MODEL | provider.model | nanoaios/mock-v1 |
+| NANOAIOS_PROVIDER_BASE_URL | provider.base_url | https://api.openai.com/v1 |
+| OPENAI_API_KEY | 由 provider.api_key_env 指定变量名 | — |
+
+### 2) 启动
 
 ```bash
+# 本地
 cargo run -- start
+
+# Docker
+docker compose up -d --build
 ```
 
-### 3) 验证服务
+### 3) 验证
 
 ```bash
-curl -s http://127.0.0.1:4242/
 curl -s http://127.0.0.1:4242/healthz
 curl -s http://127.0.0.1:4242/v1/kernel/state
 ```
 
-浏览器直接访问 `http://localhost:4242/` 也会返回服务入口信息（JSON）。
+浏览器直接访问 `http://127.0.0.1:4242/` 也会返回服务入口信息（JSON）。
 
 ### 4) 对话测试
 
 ```bash
+# 本地
 cargo run -- chat "你好，nanoaios"
+
+# Docker
+docker compose exec -it nanoaios nanoaios chat "你好，nanoaios"
 ```
 
 ---
@@ -87,7 +116,7 @@ cargo run -- chat "你好，nanoaios"
 `nanoaios` 采用最小分层：
 
 - **CLI**：命令入口与系统操作面
-- **Config**：配置声明与加载
+- **Config**：配置声明与加载（环境变量 > TOML > 默认值）
 - **Kernel**：系统状态与推理调度入口
 - **Runtime**：调用生命周期与错误处理
 - **Provider**：模型供应商适配层
@@ -107,6 +136,9 @@ docs/
   TESTING.md
   ARCHITECTURE.md
   ROADMAP.md
+Dockerfile
+docker-compose.yml
+.env.example
 ```
 
 ---
@@ -128,7 +160,7 @@ cargo run -- init --force
 cargo run -- chat "smoke test"
 ```
 
-更完整步骤见 `docs/TESTING.md`。
+更完整步骤见 [docs/TESTING.md](docs/TESTING.md)。
 
 ---
 
@@ -141,7 +173,7 @@ cargo run -- chat "smoke test"
 - Agent manifest 与能力门控
 - Daemon 化与服务管理
 
-详见 `docs/ROADMAP.md`。
+详见 [docs/ROADMAP.md](docs/ROADMAP.md)。
 
 ---
 
@@ -162,10 +194,10 @@ cargo clippy -- -D warnings
 cargo test
 ```
 
-详细贡献说明见 `CONTRIBUTING.md`。
+详细贡献说明见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ---
 
 ## 许可协议
 
-本项目采用 MIT License，详见 `LICENSE`。
+本项目采用 MIT License，详见 [LICENSE](LICENSE)。

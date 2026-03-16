@@ -14,6 +14,8 @@ use kernel::Kernel;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenv::dotenv().ok();
+
     let cli = Cli::parse();
 
     match cli.command {

@@ -1,13 +1,12 @@
 # nanoaios
 
 有一阵子我一直在想：Agent 时代到来，我们到底该先造“应用集合”，还是先造“系统内核”,
-图片记录了当时的一些想法切片，也是 `nanoaios` 的起点
-
-<p align="center"><img src="png/because.png" alt="because" width="760" /></p>
+[记录了当时的一些想法切片](https://lvyovo-wiki.tech/blog/memo-claw)，也是 `nanoaios` 的起点
 
 `nanoaios` ：一个面向 Agent 时代的极简 AIOS-kernel demo实现，定位为 **AIOS 的 Linux**。  
 
 目标不是堆叠“AI 功能集合”，而是提供一套可验证、可扩展、可替换的系统级 AI 抽象。
+
 
 ~~写燃起来了，快速 vibe 的一个项目~~，之后或许会继续完善，欢迎交流讨论
 

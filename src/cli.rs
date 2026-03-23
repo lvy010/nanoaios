@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[command(name = "nanoaios")]
-#[command(about = "AIOS 原生最小内核（Linux 风格）", long_about = None)]
+#[command(about = "Minimal native AIOS kernel (Linux style)", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -12,29 +12,40 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// 初始化 ~/.nanoaios/config.toml
+    /// Initialize ~/.nanoaios/config.toml
     Init {
-        /// 已存在配置时强制覆盖
+        /// Overwrite config if it already exists
         #[arg(long, default_value_t = false)]
         force: bool,
     },
-    /// 启动 API 内核
+    /// Start the kernel API
     Start {
-        /// 指定配置路径（默认 ~/.nanoaios/config.toml）
+        /// Optional config path (default: ~/.nanoaios/config.toml)
         #[arg(long)]
         config: Option<PathBuf>,
     },
-    /// 单轮对话测试（走 Runtime 抽象）
+    /// Single-turn chat via runtime abstraction
     Chat {
-        /// 用户输入
+        /// User prompt
         prompt: String,
-        /// 指定配置路径（默认 ~/.nanoaios/config.toml）
+        /// Session ID (writes to local Session/Memory when provided)
+        #[arg(long)]
+        session: Option<String>,
+        /// Optional config path (default: ~/.nanoaios/config.toml)
         #[arg(long)]
         config: Option<PathBuf>,
     },
-    /// 打印当前配置
+    /// Show memory content for a session
+    Session {
+        /// Session ID
+        id: String,
+        /// Optional config path (default: ~/.nanoaios/config.toml)
+        #[arg(long)]
+        config: Option<PathBuf>,
+    },
+    /// Print current config
     Config {
-        /// 指定配置路径（默认 ~/.nanoaios/config.toml）
+        /// Optional config path (default: ~/.nanoaios/config.toml)
         #[arg(long)]
         config: Option<PathBuf>,
     },

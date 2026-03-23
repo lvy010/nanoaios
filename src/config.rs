@@ -28,6 +28,23 @@ pub struct AppConfig {
     pub api_host: String,
     pub api_port: u16,
     pub provider: ProviderConfig,
+    #[serde(default)]
+    pub memory: MemoryConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryConfig {
+    pub enabled: bool,
+    pub max_messages_per_session: usize,
+}
+
+impl Default for MemoryConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            max_messages_per_session: 50,
+        }
+    }
 }
 
 impl Default for AppConfig {
@@ -42,12 +59,13 @@ impl Default for AppConfig {
                 base_url: Some("https://api.openai.com/v1".to_string()),
                 api_key_env: Some("OPENAI_API_KEY".to_string()),
             },
+            memory: MemoryConfig::default(),
         }
     }
 }
 
 pub fn config_dir() -> Result<PathBuf> {
-    let home = dirs::home_dir().ok_or_else(|| anyhow!("无法解析 HOME 目录"))?;
+    let home = dirs::home_dir().ok_or_else(|| anyhow!("failed to resolve HOME directory"))?;
     Ok(home.join(APP_DIR_NAME))
 }
 
@@ -57,15 +75,18 @@ pub fn config_path() -> Result<PathBuf> {
 
 pub fn init_config(force: bool) -> Result<PathBuf> {
     let dir = config_dir()?;
-    fs::create_dir_all(&dir).with_context(|| format!("创建配置目录失败: {}", dir.display()))?;
+    fs::create_dir_all(&dir)
+        .with_context(|| format!("failed to create config directory: {}", dir.display()))?;
 
     let path = config_path()?;
     if path.exists() && !force {
         return Ok(path);
     }
 
-    let content = toml::to_string_pretty(&AppConfig::default()).context("序列化默认配置失败")?;
-    fs::write(&path, content).with_context(|| format!("写入配置失败: {}", path.display()))?;
+    let content = toml::to_string_pretty(&AppConfig::default())
+        .context("failed to serialize default config")?;
+    fs::write(&path, content)
+        .with_context(|| format!("failed to write config: {}", path.display()))?;
     Ok(path)
 }
 
@@ -75,8 +96,8 @@ pub fn load_config(path: Option<&Path>) -> Result<AppConfig> {
         None => config_path()?,
     };
     let raw = fs::read_to_string(&final_path)
-        .with_context(|| format!("读取配置失败: {}", final_path.display()))?;
+        .with_context(|| format!("failed to read config: {}", final_path.display()))?;
     let config = toml::from_str::<AppConfig>(&raw)
-        .with_context(|| format!("解析配置失败: {}", final_path.display()))?;
+        .with_context(|| format!("failed to parse config: {}", final_path.display()))?;
     Ok(config)
 }

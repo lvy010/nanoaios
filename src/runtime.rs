@@ -33,7 +33,7 @@ impl Runtime {
             .as_deref()
             .unwrap_or("OPENAI_API_KEY");
         let api_key =
-            env::var(api_key_env).with_context(|| format!("未设置环境变量: {api_key_env}"))?;
+            env::var(api_key_env).with_context(|| format!("missing env var: {api_key_env}"))?;
         let base_url = self
             .provider
             .base_url
@@ -51,18 +51,21 @@ impl Runtime {
             }))
             .send()
             .await
-            .context("请求 OpenAI 兼容接口失败")?;
+            .context("request to OpenAI-compatible endpoint failed")?;
 
         if !resp.status().is_success() {
             let code = resp.status();
             let body = resp.text().await.unwrap_or_else(|_| "<empty>".to_string());
-            bail!("模型请求失败: {code} {body}");
+            bail!("model request failed: {code} {body}");
         }
 
-        let value: serde_json::Value = resp.json().await.context("解析模型响应失败")?;
+        let value: serde_json::Value = resp
+            .json()
+            .await
+            .context("failed to parse model response")?;
         let content = value["choices"][0]["message"]["content"]
             .as_str()
-            .ok_or_else(|| anyhow::anyhow!("响应缺少 choices[0].message.content"))?;
+            .ok_or_else(|| anyhow::anyhow!("response missing choices[0].message.content"))?;
         Ok(content.to_string())
     }
 }

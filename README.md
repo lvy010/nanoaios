@@ -31,20 +31,28 @@
 
 ---
 
-## 当前能力（v0.1）
+## 当前能力（v0.2 alpha）
 
 - `nanoaios init`：初始化 `~/.nanoaios/config.toml`
 - `nanoaios start`：启动内核 API
 - `nanoaios chat "<prompt>"`：单轮推理调用
+- `nanoaios chat "<prompt>" --session <id>`：带 Session 的推理调用（自动写入本地记忆）
+- `nanoaios session <id>`：查看某个 Session 的本地记忆
 - `nanoaios config`：打印当前配置
 - Provider 抽象：
   - `mock`（离线调试）
   - `openai_compatible`（OpenAI 兼容接口）
+- Session / Memory（文件型最小实现）：
+  - 默认存储在 `~/.nanoaios/sessions/`
+  - 支持按 `session_id` 读取历史
+  - 支持 `max_messages_per_session` 上限裁剪
 
 已提供 API：
 
 - `GET /healthz`
 - `GET /v1/kernel/state`
+- `GET /v1/kernel/memory/{session_id}`
+- `POST /v1/chat/completions`
 
 ---
 
@@ -77,6 +85,14 @@ curl -s http://127.0.0.1:4242/v1/kernel/state
 
 ```bash
 cargo run -- chat "你好，nanoaios"
+```
+
+带 Session 的记忆对话：
+
+```bash
+cargo run -- chat "我叫小明" --session demo01
+cargo run -- chat "你还记得我叫什么吗？" --session demo01
+cargo run -- session demo01
 ```
 
 ---
@@ -125,7 +141,26 @@ cargo test
 # 冒烟验证
 cargo run -- init --force
 cargo run -- chat "smoke test"
+cargo run -- chat "remember me" --session smoke01
+cargo run -- session smoke01
 ```
+
+---
+
+## Session / Memory 配置
+
+默认配置新增了 `memory` 段：
+
+```toml
+[memory]
+enabled = true
+max_messages_per_session = 50
+```
+
+说明：
+
+- `enabled = true`：启用本地文件记忆
+- `max_messages_per_session`：每个会话保留的最大消息条数（超过会自动裁剪旧消息）
 
 更完整步骤见 `docs/TESTING.md`。
 

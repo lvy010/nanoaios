@@ -7,6 +7,7 @@ use tokio::sync::RwLock;
 use crate::config::{AppConfig, config_dir};
 use crate::memory::{MemoryStore, SessionMemory, default_memory_dir};
 use crate::runtime::Runtime;
+use crate::tool::{ToolManifest, ToolRegistry, default_tools_dir};
 
 #[derive(Debug, Clone)]
 pub struct KernelStats {
@@ -19,6 +20,7 @@ pub struct Kernel {
     runtime: Runtime,
     stats: Arc<RwLock<KernelStats>>,
     memory_store: Option<MemoryStore>,
+    tool_registry: RwLock<ToolRegistry>,
 }
 
 impl Kernel {
@@ -33,6 +35,11 @@ impl Kernel {
             None
         };
 
+        let mut tool_registry = ToolRegistry::new(default_tools_dir(&config_dir()?));
+        if let Err(e) = tool_registry.load_all() {
+            eprintln!("warn: failed to load tools: {e}");
+        }
+
         Ok(Self {
             runtime: Runtime::new(config.provider.clone()),
             config,
@@ -41,6 +48,7 @@ impl Kernel {
                 turns: 0,
             })),
             memory_store,
+            tool_registry: RwLock::new(tool_registry),
         })
     }
 
@@ -73,5 +81,29 @@ impl Kernel {
             Some(store) => store.load_session(session_id),
             None => Ok(None),
         }
+    }
+
+    pub fn tool_list(&self) -> Vec<ToolManifest> {
+        let reg = self.tool_registry.blocking_read();
+        reg.list().into_iter().cloned().collect()
+    }
+
+    pub fn tool_add(&self, manifest_path: &std::path::Path) -> Result<ToolManifest> {
+        let mut reg = self.tool_registry.blocking_write();
+        reg.add(manifest_path)
+    }
+
+    pub fn tool_remove(&self, name: &str) -> Result<()> {
+        let mut reg = self.tool_registry.blocking_write();
+        reg.remove(name)
+    }
+
+    pub async fn tool_invoke(
+        &self,
+        name: &str,
+        params: &serde_json::Value,
+    ) -> Result<serde_json::Value> {
+        let reg = self.tool_registry.read().await;
+        reg.invoke(name, params).await
     }
 }

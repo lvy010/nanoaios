@@ -1,0 +1,7 @@
+name = "translate"
+description = "文本翻译（POST JSON）"
+kind = "http"
+base_url = "https://api.translate.example.com"
+method = "POST"
+path = "/v1/translate"
+timeout_secs = 15

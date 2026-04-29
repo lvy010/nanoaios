@@ -49,4 +49,32 @@ pub enum Commands {
         #[arg(long)]
         config: Option<PathBuf>,
     },
+    /// Manage registered tools
+    Tool {
+        #[command(subcommand)]
+        action: ToolAction,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ToolAction {
+    /// List all registered tools
+    List {
+        #[arg(long)]
+        config: Option<PathBuf>,
+    },
+    /// Register a tool from a manifest file
+    Add {
+        /// Path to tool manifest (.toml)
+        manifest: PathBuf,
+        #[arg(long)]
+        config: Option<PathBuf>,
+    },
+    /// Remove a registered tool by name
+    Remove {
+        /// Tool name
+        name: String,
+        #[arg(long)]
+        config: Option<PathBuf>,
+    },
 }

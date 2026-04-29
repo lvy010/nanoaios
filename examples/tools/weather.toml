@@ -1,0 +1,7 @@
+name = "weather"
+description = "查询城市实时天气"
+kind = "http"
+base_url = "https://api.weather.example.com"
+method = "GET"
+path = "/v1/current"
+timeout_secs = 10

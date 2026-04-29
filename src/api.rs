@@ -23,6 +23,8 @@ pub async fn serve(kernel: Arc<Kernel>) -> Result<()> {
         .route("/v1/kernel/state", get(state))
         .route("/v1/kernel/memory/{session_id}", get(session_memory))
         .route("/v1/chat/completions", post(chat_completions))
+        .route("/v1/tools", get(list_tools))
+        .route("/v1/tools/{tool_name}/invoke", post(invoke_tool))
         .with_state(kernel);
 
     let listener = tokio::net::TcpListener::bind(addr)
@@ -50,7 +52,9 @@ async fn index() -> Json<serde_json::Value> {
             "health": "/healthz",
             "kernel_state": "/v1/kernel/state",
             "kernel_memory": "/v1/kernel/memory/{session_id}",
-            "chat_completions": "/v1/chat/completions"
+            "chat_completions": "/v1/chat/completions",
+            "tools": "/v1/tools",
+            "tool_invoke": "/v1/tools/{tool_name}/invoke"
         }
     }))
 }
@@ -99,5 +103,30 @@ async fn chat_completions(
             "ok": false,
             "error": err.to_string()
         })),
+    }
+}
+
+async fn list_tools(State(kernel): State<Arc<Kernel>>) -> Json<serde_json::Value> {
+    let tools = kernel.tool_list();
+    let items: Vec<_> = tools
+        .iter()
+        .map(|t| json!({"name": t.name, "kind": t.kind, "description": t.description}))
+        .collect();
+    Json(json!({"ok": true, "tools": items}))
+}
+
+#[derive(Debug, Deserialize)]
+struct ToolInvokeRequest {
+    params: serde_json::Value,
+}
+
+async fn invoke_tool(
+    Path(tool_name): Path<String>,
+    State(kernel): State<Arc<Kernel>>,
+    Json(payload): Json<ToolInvokeRequest>,
+) -> Json<serde_json::Value> {
+    match kernel.tool_invoke(&tool_name, &payload.params).await {
+        Ok(result) => Json(json!({"ok": true, "result": result})),
+        Err(err) => Json(json!({"ok": false, "error": err.to_string()})),
     }
 }

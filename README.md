@@ -1,15 +1,25 @@
 # nanoaios
 
-有一阵子我一直在想：Agent 时代到来，我们到底该先造“应用集合”，还是先造“系统内核”,
-[记录了当时的一些想法切片](https://lvyovo-wiki.tech/blog/memo-claw)，也是 `nanoaios` 的起点
+[记录了当时的一些想法切片](https://lvyovo-wiki.tech/blog/memo-claw)
 
 `nanoaios` ：一个面向 Agent 时代的极简 AIOS-kernel demo实现，定位为 **AIOS 的 Linux**。  
 
 目标不是堆叠“AI 功能集合”，而是提供一套可验证、可扩展、可替换的系统级 AI 抽象。
 
+~~快速 vibe 的一个项目~~，之后或许会继续完善，欢迎交流讨论
 
-~~写燃起来了，快速 vibe 的一个项目~~，之后或许会继续完善，欢迎交流讨论
 
+---
+
+## 为什么是现在
+
+第二次 API 开放浪潮正在到来。
+
+2025 下半年，大模型达到生产级临界点，AI 的核心价值从"内容生成"转向"内容生成 + 自动化"。自动化意味着 Agent 必须能调用外部平台——而外部平台必须先开放 API。MCP、Skill 等协议正在成为这波开放的标准接口。
+
+没有 API 的平台将被 Agent 工作流绕过；有 API 的平台则需要一个**系统级的调度内核**来安全、可控地代替用户行事。
+
+`nanoaios` 就是这个内核——不堆功能，只做推理调度、Tool 编排、权限管控和生命周期管理。
 
 ---
 
@@ -21,12 +31,14 @@
 
 - 用最小内核面承载推理入口与系统状态
 - 用运行时抽象屏蔽模型供应商差异
+- 用 Tool 层对接外部平台 API（MCP / HTTP）
 - 用统一 API 暴露可观测与可集成能力
 
 核心原则：
 
 - **简洁优先**：单仓库、单二进制、低复杂度
-- **边界清晰**：Kernel / Runtime / Provider 分层明确
+- **边界清晰**：Kernel / Runtime / Tool / Provider 分层明确
+- **开放接入**：通过 Tool manifest 对接任意 MCP Server 或 HTTP API
 - **工程可落地**：可启动、可测试、可演进
 
 ---
@@ -39,6 +51,9 @@
 - `nanoaios chat "<prompt>" --session <id>`：带 Session 的推理调用（自动写入本地记忆）
 - `nanoaios session <id>`：查看某个 Session 的本地记忆
 - `nanoaios config`：打印当前配置
+- `nanoaios tool list`：列出已注册的 Tool
+- `nanoaios tool add <manifest.toml>`：注册新 Tool
+- `nanoaios tool remove <tool_name>`：移除 Tool
 - Provider 抽象：
   - `mock`（离线调试）
   - `openai_compatible`（OpenAI 兼容接口）
@@ -46,6 +61,10 @@
   - 默认存储在 `~/.nanoaios/sessions/`
   - 支持按 `session_id` 读取历史
   - 支持 `max_messages_per_session` 上限裁剪
+- Tool 执行层：
+  - 通过 TOML manifest 注册外部 Tool（MCP / HTTP）
+  - 白名单管控 + 超时保护
+  - `~/.nanoaios/tools/` 目录管理 Tool manifest
 
 已提供 API：
 
@@ -53,6 +72,8 @@
 - `GET /v1/kernel/state`
 - `GET /v1/kernel/memory/{session_id}`
 - `POST /v1/chat/completions`
+- `GET  /v1/tools`
+- `POST /v1/tools/{tool_name}/invoke`
 
 ---
 
@@ -97,6 +118,37 @@ cargo run -- session demo01
 
 ---
 
+### 5) Tool 管理
+
+注册一个 Tool（以 HTTP API 为例）：
+
+```bash
+cargo run -- tool add examples/tools/weather.toml
+cargo run -- tool list
+```
+
+`weather.toml` manifest 示例：
+
+```toml
+name = "weather"
+description = "查询城市天气"
+kind = "http"
+base_url = "https://api.weather.example.com"
+method = "GET"
+path = "/v1/current"
+timeout_secs = 10
+```
+
+通过 API 调用已注册的 Tool：
+
+```bash
+curl -X POST http://127.0.0.1:4242/v1/tools/weather/invoke \
+  -H 'Content-Type: application/json' \
+  -d '{"params": {"city": "Shanghai"}}'
+```
+
+---
+
 ## 架构概览
 
 `nanoaios` 采用最小分层：
@@ -105,6 +157,7 @@ cargo run -- session demo01
 - **Config**：配置声明与加载
 - **Kernel**：系统状态与推理调度入口
 - **Runtime**：调用生命周期与错误处理
+- **Tool**：外部 API 注册、发现与调用（MCP / HTTP）
 - **Provider**：模型供应商适配层
 - **API**：可观测、可集成接口
 
@@ -118,6 +171,8 @@ src/
   kernel.rs
   runtime.rs
   api.rs
+  tool.rs
+  memory.rs
 docs/
   TESTING.md
   ARCHITECTURE.md
@@ -170,9 +225,10 @@ max_messages_per_session = 50
 
 短期目标（v0.2 / v0.3）：
 
-- Session / Memory 子系统
-- Tool 执行层（白名单、超时、审计）
+- ~~Session / Memory 子系统~~ ✅
+- ~~Tool 执行层（manifest 注册、白名单、超时）~~ ✅
 - Agent manifest 与能力门控
+- MCP Client 协议（连接任意 MCP Server）
 - Daemon 化与服务管理
 
 详见 `docs/ROADMAP.md`。
